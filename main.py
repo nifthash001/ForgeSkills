@@ -3,6 +3,7 @@ import sqlite3
 from datetime import datetime
 import json
 import re
+import textwrap
 import html as _html
 from ai import generate_roadmap
 
@@ -151,6 +152,9 @@ class MainPage(QWidget):
         self.checklist.setHeaderHidden(True)
         self.checklist.setRootIsDecorated(True)
         self.checklist.setItemsExpandable(True)
+        self.checklist.setWordWrap(True)
+        self.checklist.setUniformRowHeights(False)
+        self.checklist.setTextElideMode(Qt.ElideNone)
         self.checklist.setStyleSheet(
             "QTreeView::item { padding: 10px 8px; } QTreeWidget { min-width: 360px; }")
         self.checklist.itemChanged.connect(self._on_check_changed)
@@ -251,6 +255,7 @@ class MainPage(QWidget):
             display_text = title
             if estimate:
                 display_text += f"  •  {estimate}"
+            display_text = textwrap.fill(display_text, width=45)
 
             parent = QTreeWidgetItem([display_text])
             parent.setFlags(parent.flags() | Qt.ItemIsUserCheckable)
@@ -258,7 +263,8 @@ class MainPage(QWidget):
             self.checklist.addTopLevelItem(parent)
 
             for subtask in subtasks:
-                child = QTreeWidgetItem([str(subtask)])
+                child_text = textwrap.fill(str(subtask), width=45)
+                child = QTreeWidgetItem([child_text])
                 child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
                 child.setCheckState(0, Qt.Unchecked)
                 parent.addChild(child)

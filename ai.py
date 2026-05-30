@@ -130,7 +130,7 @@ try:
         """.strip()
 
         response = ollama.chat(
-            model='qwen:4b',
+            model='gemma4',
             messages=[{'role': 'user', 'content': prompt}]
         )
 
