@@ -4,11 +4,11 @@ A PySide6-based desktop application for generating and tracking personalized lea
 
 ## Features
 
-- **AI-Powered Roadmaps**: Generate structured learning plans for any topic using Ollama (qwen:4b model)
+- **Single Topic Input**: Enter the skill you want to learn, generate a roadmap instantly
+- **Active Session Tracking**: Mark a roadmap as your active primary plan and resume automatically when you restart the app
+- **Side Quests**: Optionally add secondary skills as side quests to your active roadmap
 - **Interactive Checklist**: Track progress with hierarchical parent-child task checklists
-- **Learning Dashboard**: View history of all learning sessions with timestamps
-- **Dark Theme UI**: Modern dark interface with blue accent colors
-- **SQLite Storage**: Persistent storage of learning sessions and roadmaps
+- **Progress Persistence**: Completed checklist items and progress percent are saved and restored automatically
 
 ## Requirements
 
@@ -39,10 +39,13 @@ python main.py
 
 ## Usage
 
-1. **Enter a learning topic** in the input field (e.g., "Python learning roadmap")
-2. **Click "Generate Roadmap"** to create a structured learning plan
-3. **Check off completed items** in the checklist as you progress
-4. **Open Dashboard** to view all past learning sessions
+1. **Enter a learning skill** in the input field (e.g., "Machine Learning")
+2. **Click "Generate Roadmap"** to create a structured learning plan from AI
+3. **Set as active** by confirming the prompt - your active roadmap will resume on next app restart
+4. **Optionally add side quests** - secondary skills to explore alongside the main roadmap
+5. **Check off completed items** in the checklist as you progress
+6. **Progress is automatically saved** - close and restart the app to resume from where you left off
+7. **Open Dashboard** to view all past learning sessions and charts of your learning journey
 
 ## Project Structure
 

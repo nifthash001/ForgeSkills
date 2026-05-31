@@ -5,6 +5,7 @@
 The AI Learning Tracker is organized into two main modules:
 
 - **`ai.py`** - AI roadmap generation and text parsing
+- **`tracking.py`** - Checklist progress calculation and formatting
 - **`main.py`** - PySide6 GUI application with database integration
 
 ## Module Details
@@ -12,6 +13,24 @@ The AI Learning Tracker is organized into two main modules:
 ### ai.py
 
 Handles all AI-related functionality for generating learning roadmaps.
+
+### tracking.py
+
+Handles checklist progress calculation for the main UI.
+
+#### Functions
+
+**`compute_checklist_progress(tree_widget: QTreeWidget) -> int`**
+- Computes total and completed checklist items from a hierarchical `QTreeWidget`
+- Returns an integer percent complete
+
+**`format_progress(total_percent: int) -> str`**
+- Formats a progress percentage for display in the UI
+
+#### Behavior
+- Counts every checkable task including parent and child items
+- Returns `0` when the checklist is empty
+
 
 #### Functions
 
@@ -67,25 +86,30 @@ PySide6 desktop application with two pages and SQLite backend.
 
 **`MainPage` (QWidget)**
 - **Title**: "AI Learning Tracker" header
-- **Input**: `QLineEdit` for entering learning topic
-- **Button**: "Generate Roadmap" to trigger roadmap generation
-- **Output**: `QTextEdit` displaying formatted roadmap with HTML styling
-- **Checklist**: `QTreeWidget` hierarchical task list with checkboxes
-- **Navigation**: Button to open dashboard page
+- **Input**: `QLineEdit` for entering a learning skill/topic only
+- **Generate Button**: Triggers roadmap generation from the topic
+- **Active Session Status**: Shows the current active roadmap and focus status
+- **Output**: `QTextEdit` displaying the AI-generated roadmap with HTML styling
+- **Checklist**: `QTreeWidget` hierarchical task list with checkboxes for tracking progress
+- **Progress Label**: Live percent complete, calculated from checked items
+- **Navigation**: Button to open the dashboard
 
 **Features:**
-- Parent-child checkbox propagation
-- Partial check state for parents with mixed children
+- Single topic input (no upfront focus skill fields)
+- Parent-child checkbox propagation and partial state tracking
 - Color dimming (gray) for completed items
-- HTML formatting for roadmap output
+- Automatic active session loading on app startup
+- Checklist state and progress persistence to database
+- Post-generation prompts to set as active and optionally add side quests
 - Automatic session saving to database
 
 **`DashboardPage` (QWidget)**
 - **Title**: "Learning Dashboard" header
-- **Sessions List**: `QListWidget` showing all past learning sessions
-- Displays topic and creation timestamp for each session
-- Sessions ordered by most recent first
-
+- **Session Table**: `QTreeWidget` showing topic, primary/secondary focus, creation date, and progress
+  - Active session is highlighted in blue (#3A7AFE)
+- **Session Details**: Select a session to preview roadmap and focus details
+- **Charts**: `QChartView` widgets show progress trends and focus skill distribution
+  - Sessions ordered by most recent first
 **`MainWindow` (QMainWindow)**
 - Top-level application window (1000x700)
 - `QStackedWidget` for page switching
@@ -100,7 +124,13 @@ CREATE TABLE learning_sessions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   topic TEXT,
   roadmap TEXT,  -- JSON string of roadmap steps
-  created_at TEXT
+  primary_focus TEXT,  -- Primary skill/focus area
+  secondary_focus TEXT,  -- Optional side quest
+  progress INTEGER DEFAULT 0,  -- Completion percent (0-100)
+  is_active INTEGER DEFAULT 0,  -- Flag for active session (0 or 1)
+  checklist_state TEXT,  -- JSON serialization of all item check states
+  created_at TEXT,
+  last_updated TEXT  -- Timestamp of last progress update
 )
 ```
 
@@ -123,21 +153,49 @@ CREATE TABLE learning_sessions (
 - Refreshes colors recursively for visual feedback
 
 **`generate_learning_plan()`**
-- Validates topic input
+- Validates topic input (must not be empty)
 - Calls `generate_roadmap()` from ai module
 - Builds tree widget items from roadmap steps
 - Generates formatted HTML output
-- Saves session to database
+- Prompts user: "Set as active plan?" (Yes/No)
+- If yes: optionally prompts for side quest, marks as `is_active=1`, clears other active sessions
+- If no: saves as regular session with `is_active=0`
+- Saves session to database with serialized checklist state
 
 #### Data Flow
 
-1. User enters topic → `MainPage.topic_input`
+1. User enters skill/topic → `MainPage.topic_input`
 2. Click "Generate" → `generate_learning_plan()`
 3. Call `ai.generate_roadmap(topic)` → receives roadmap list
 4. Build checklist items recursively from roadmap
 5. Display HTML-formatted output
-6. Save to SQLite database
-7. Update dashboard page
+6. Prompt "Set as active?" → if yes, mark as `is_active=1` and optionally add side quest
+7. Serialize checklist state to JSON and save to SQLite database
+8. Update dashboard page
+9. On next app startup, `MainWindow.__init__` calls `_load_active_session()` to restore
+
+#### Session Persistence Methods
+
+**`_serialize_checklist()` → str (JSON)**
+- Converts all tree widget item check states to nested JSON structure
+- Recursively processes parent and child items
+- Stores both checked state and tree structure
+
+**`_deserialize_checklist(state_json)` → None**
+- Reconstructs tree widget item check states from JSON
+- Recursively applies check states to match saved state
+- Called by `_load_active_session()` to restore on app startup
+
+**`_save_active_session_state(session_id)` → None**
+- Updates active session in database with current progress and checklist state
+- Triggered by `_on_check_changed()` every time a checkbox is checked/unchecked
+- Saves: progress percent, checklist_state JSON, last_updated timestamp
+
+**`_load_active_session()` → None**
+- Called on app startup by `MainWindow.__init__`
+- Queries database for session with `is_active=1`
+- If found: loads roadmap, deserializes checklist state, displays session info
+- If not found: clears UI for new session
 
 ## Dependencies
 
